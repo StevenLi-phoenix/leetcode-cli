@@ -2,6 +2,8 @@
 
 # leetcode-cli
 
+[![npm](https://img.shields.io/npm/v/@stevenli-phoenix/leetcode-cli)](https://www.npmjs.com/package/@stevenli-phoenix/leetcode-cli) [![CI](https://github.com/StevenLi-phoenix/leetcode-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/StevenLi-phoenix/leetcode-cli/actions/workflows/ci.yml)
+
 A minimal LeetCode CLI for terminal-driven problem solving. No TUI, no remote backend, no native dependencies — just `list`, `show`, `pick`, `test`, `submit`, and a few quality-of-life extras. Solve in your own editor; drive everything from the shell.
 
 Installs two equivalent commands: **`leetcode`** and **`leetcode-cli`**.
@@ -165,6 +167,17 @@ pnpm test          # node --test (via tsx)
 pnpm build         # bundle to dist/ with tsup
 pnpm dev           # watch build
 ```
+
+Every push to `main` and every pull request is gated by CI (`.github/workflows/ci.yml`): typecheck + test + build on Node 20 and 22.
+
+## Releasing
+
+Published to npm as the scoped package **`@stevenli-phoenix/leetcode-cli`** (the `leetcode`/`leetcode-cli` commands are unchanged). To cut a release:
+
+1. Bump the version in **both** `package.json` and the `VERSION` constant in `src/index.ts` — they must match.
+2. `git tag vX.Y.Z && git push origin vX.Y.Z`.
+
+`.github/workflows/release.yml` then verifies the tag matches both version strings, runs typecheck + test + build, and publishes to npm — via OIDC [Trusted Publishing](https://docs.npmjs.com/trusted-publishers), no tokens — and to GitHub Packages, and creates a GitHub Release with the packed tarball. Each publish is idempotent (a version already on a registry is skipped).
 
 ## Tech Stack
 
