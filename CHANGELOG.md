@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- CI workflow running typecheck + test + build on every push to `main` and every pull request, across Node 20 and 22.
+  Files: .github/workflows/ci.yml
+
 ### Changed
 - Bumped the release workflow's actions to their Node 24 runtime versions (`actions/checkout@v5`, `actions/setup-node@v6`, `pnpm/action-setup@v6`, `softprops/action-gh-release@v3`) to clear GitHub's Node 20 deprecation warning.
   Files: .github/workflows/release.yml
