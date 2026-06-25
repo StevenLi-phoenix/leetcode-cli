@@ -23,7 +23,30 @@ $ leetcode submit 1      # submit to the judge
 
 ## Install
 
-Requires **Node.js ≥ 20**.
+Requires **Node.js ≥ 20**. Either way you get two equivalent commands: `leetcode` and `leetcode-cli`.
+
+**From npm** (published as the scoped package `@stevenli-phoenix/leetcode-cli`):
+
+```bash
+npm i -g @stevenli-phoenix/leetcode-cli
+# or: pnpm add -g @stevenli-phoenix/leetcode-cli
+```
+
+**From GitHub Packages** — public, but GitHub requires an authenticated install, so point the scope at the GitHub registry first (the token only needs `read:packages`):
+
+```bash
+echo "@stevenli-phoenix:registry=https://npm.pkg.github.com" >> ~/.npmrc
+echo "//npm.pkg.github.com/:_authToken=<YOUR_GITHUB_TOKEN>" >> ~/.npmrc
+npm i -g @stevenli-phoenix/leetcode-cli
+```
+
+**From a GitHub Release** — grab the tarball attached to any [release](https://github.com/StevenLi-phoenix/leetcode-cli/releases):
+
+```bash
+npm i -g https://github.com/StevenLi-phoenix/leetcode-cli/releases/download/v0.1.0/stevenli-phoenix-leetcode-cli-0.1.0.tgz
+```
+
+**From source:**
 
 ```bash
 pnpm install

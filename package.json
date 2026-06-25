@@ -1,5 +1,5 @@
 {
-  "name": "leetcode-cli",
+  "name": "@stevenli-phoenix/leetcode-cli",
   "version": "0.1.0",
   "description": "A minimal LeetCode CLI for terminal-driven problem solving",
   "type": "module",
@@ -11,12 +11,25 @@
   "files": [
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StevenLi-phoenix/leetcode-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/StevenLi-phoenix/leetcode-cli/issues"
+  },
+  "homepage": "https://github.com/StevenLi-phoenix/leetcode-cli#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "packageManager": "pnpm@10.10.0",
   "scripts": {
     "build": "tsup src/index.ts --format esm --clean",
     "dev": "tsup src/index.ts --format esm --watch",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test test/*.test.ts"
+    "test": "node --import tsx --test test/*.test.ts",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "leetcode",
