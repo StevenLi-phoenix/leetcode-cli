@@ -2,7 +2,7 @@
 import type { Command } from 'commander';
 import { config } from '../config.js';
 import { LeetCodeClient } from '../api/client.js';
-import type { DifficultyFilter } from '../api/client.js';
+import type { DifficultyFilter, StatusFilter } from '../api/client.js';
 import { UsageError } from '../lib/errors.js';
 import { difficulty as fmtDiff, statusIcon, paidIcon, padStart, acceptance, chalk } from '../lib/format.js';
 
@@ -13,11 +13,32 @@ export function parseDifficulty(d?: string): DifficultyFilter | undefined {
   throw new UsageError(`Invalid difficulty "${d}".`, 'Use easy, medium, or hard.');
 }
 
+// Friendly status names → LeetCode's filter enum.
+const STATUS_MAP: Record<string, StatusFilter> = {
+  unsolved: 'NOT_STARTED',
+  todo: 'NOT_STARTED',
+  'not-started': 'NOT_STARTED',
+  new: 'NOT_STARTED',
+  solved: 'AC',
+  ac: 'AC',
+  done: 'AC',
+  attempted: 'TRIED',
+  tried: 'TRIED',
+};
+
+export function parseStatus(s?: string): StatusFilter | undefined {
+  if (!s) return undefined;
+  const v = STATUS_MAP[s.toLowerCase()];
+  if (!v) throw new UsageError(`Invalid status "${s}".`, 'Use unsolved, solved, or attempted.');
+  return v;
+}
+
 interface ListOpts {
   difficulty?: string;
   tag?: string[];
   search?: string;
   category?: string;
+  status?: string;
   limit: string;
   page: string;
 }
@@ -31,6 +52,7 @@ export function registerList(program: Command): void {
     .option('-t, --tag <tag...>', 'filter by topic-tag slug(s)')
     .option('-s, --search <keywords>', 'search by keyword')
     .option('-c, --category <slug>', 'category slug (e.g. algorithms, database)')
+    .option('--status <state>', 'unsolved | solved | attempted (requires login)')
     .option('-n, --limit <n>', 'number of problems to show', '50')
     .option('-p, --page <n>', 'page number (1-based)', '1')
     .action(async (opts: ListOpts) => {
@@ -42,6 +64,7 @@ export function registerList(program: Command): void {
         tags: opts.tag,
         search: opts.search,
         category: opts.category,
+        status: parseStatus(opts.status),
         limit,
         skip: (page - 1) * limit,
       });

@@ -62,7 +62,7 @@ Reading problems, listing, and the daily challenge work anonymously; `whoami`, `
 | Command | Description |
 |---|---|
 | `login` / `logout` / `whoami` | Manage and inspect your session |
-| `list` (`ls`) | Browse/filter problems: `-d <easy\|medium\|hard>`, `-t <tag...>`, `-s <search>`, `-c <category>`, `-n <limit>`, `-p <page>` |
+| `list` (`ls`) | Browse/filter problems: `-d <easy\|medium\|hard>`, `-t <tag...>`, `-s <search>`, `-c <category>`, `--status <unsolved\|solved\|attempted>` (needs login), `-n <limit>`, `-p <page>` |
 | `show <id>` | Render a problem statement (`-x` to include hints) |
 | `hint <id>` | Show hints (`-n <k>` for a single one) |
 | `pick <id>` | Generate a solution file (`-l <lang>`, `-f` force, `--show`, `--open`) |
