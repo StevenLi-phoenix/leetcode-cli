@@ -1,0 +1,23 @@
+{
+  "name": "leetcode-cli",
+  "version": "0.1.0",
+  "description": "A minimal LeetCode CLI for terminal-driven problem solving",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "lc": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts --format esm --watch",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["leetcode", "cli", "typescript"],
+  "author": "Steven Li",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
