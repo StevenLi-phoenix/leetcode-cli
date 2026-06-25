@@ -13,7 +13,7 @@ $ leetcode list -d easy -n 5
     20  Easy    44.4%  Valid Parentheses
 
 $ leetcode pick 1 --lang python3
-✔ Created ~/leetcode/easy/array/1.two-sum.py
+✔ Created ./problems/1.two-sum.py
 Language: python3  ·  id: 1  ·  two-sum
 
 $ leetcode test 1        # run the example cases
@@ -62,7 +62,7 @@ Reading problems, listing, and the daily challenge work anonymously; `whoami`, `
 | Command | Description |
 |---|---|
 | `login` / `logout` / `whoami` | Manage and inspect your session |
-| `list` (`ls`) | Browse/filter problems: `-d <easy\|medium\|hard>`, `-t <tag...>`, `-s <search>`, `-c <category>`, `-n <limit>`, `-p <page>` |
+| `list` (`ls`) | Browse/filter problems: `-d <easy\|medium\|hard>`, `-t <tag...>`, `-s <search>`, `-c <category>`, `--status <unsolved\|solved\|attempted>` (needs login), `-n <limit>`, `-p <page>` |
 | `show <id>` | Render a problem statement (`-x` to include hints) |
 | `hint <id>` | Show hints (`-n <k>` for a single one) |
 | `pick <id>` | Generate a solution file (`-l <lang>`, `-f` force, `--show`, `--open`) |
@@ -79,13 +79,13 @@ Reading problems, listing, and the daily challenge work anonymously; `whoami`, `
 
 ### Solution files
 
-`pick` writes files under your workdir, organized as:
+`pick` writes files under your workdir (defaults to the current directory; set a fixed one with `config workdir`), organized as:
 
 ```
-{workdir}/{difficulty}/{category}/{id}.{slug}.{ext}
+{workdir}/problems/{id}.{slug}.{ext}
 ```
 
-e.g. `~/leetcode/easy/array/1.two-sum.py`. Each file begins with a one-line metadata comment so `test`/`submit` can recover the problem id, language, and slug automatically — just point them at the file (or the problem id) after editing.
+e.g. `./problems/1.two-sum.py`. Each file begins with a one-line metadata comment so `test`/`submit` can recover the problem id, language, and slug automatically — just point them at the file (or the problem id) after editing.
 
 ### Configuration
 

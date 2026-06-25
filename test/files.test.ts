@@ -5,8 +5,6 @@ import {
   langExtension,
   extToLang,
   commentPrefix,
-  difficultyDir,
-  categoryDir,
   solutionPath,
   buildSolutionFile,
   parseHeader,
@@ -49,24 +47,14 @@ test('commentPrefix per language', () => {
   assert.equal(commentPrefix('cpp'), '//');
 });
 
-test('difficultyDir and categoryDir', () => {
-  assert.equal(difficultyDir('Easy'), 'easy');
-  assert.equal(difficultyDir('HARD'), 'hard');
-  assert.equal(difficultyDir('weird'), 'other');
-  assert.equal(categoryDir(['Hash Table', 'array']), 'hash-table');
-  assert.equal(categoryDir([]), 'uncategorized');
-});
-
-test('solutionPath builds {workdir}/{difficulty}/{category}/{id}.{slug}.{ext}', () => {
+test('solutionPath builds {workdir}/problems/{id}.{slug}.{ext}', () => {
   const p = solutionPath({
     workdir: '/w',
-    difficulty: 'Easy',
-    category: 'array',
     frontendId: '1',
     slug: 'two-sum',
     langSlug: 'python3',
   });
-  assert.equal(p, '/w/easy/array/1.two-sum.py');
+  assert.equal(p, '/w/problems/1.two-sum.py');
 });
 
 test('buildSolutionFile + parseHeader round-trip (quotes in title)', () => {
@@ -103,13 +91,9 @@ test('stripHeader preserves a later @leetcode mention in the body', () => {
 });
 
 test('solutionPath blocks path traversal via slug', () => {
-  const p = solutionPath({ workdir: '/w', difficulty: 'Easy', category: 'array', frontendId: '1', slug: '../../etc/passwd', langSlug: 'python3' });
+  const p = solutionPath({ workdir: '/w', frontendId: '1', slug: '../../etc/passwd', langSlug: 'python3' });
   assert.ok(!p.includes('..'), p);
-});
-
-test('categoryDir rejects dot-only segments', () => {
-  assert.equal(categoryDir(['..']), 'uncategorized');
-  assert.equal(categoryDir(['.']), 'uncategorized');
+  assert.ok(p.startsWith('/w/problems/'), p);
 });
 
 test('findSnippet and availableLangs', () => {

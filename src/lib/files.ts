@@ -111,63 +111,41 @@ export function availableLangs(snippets: readonly CodeSnippet[]): string[] {
   return snippets.map((s) => s.langSlug);
 }
 
-const DIFFICULTY_DIR: Record<string, string> = { easy: 'easy', medium: 'medium', hard: 'hard' };
-
-/** Lowercased difficulty folder name. */
-export function difficultyDir(difficulty: string): string {
-  return DIFFICULTY_DIR[difficulty.toLowerCase()] ?? 'other';
-}
-
 /** Sanitise an arbitrary string into a safe path segment (no traversal). */
 function safeSegment(s: string): string {
   const cleaned = s
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, '-')
     .replace(/^[-.]+|[-.]+$/g, ''); // strip leading/trailing dots & hyphens → blocks '.', '..'
-  return cleaned && cleaned !== '.' && cleaned !== '..' ? cleaned : 'uncategorized';
+  return cleaned && cleaned !== '.' && cleaned !== '..' ? cleaned : 'problem';
 }
 
-/** Category folder for a problem (its first topic tag slug, else 'uncategorized'). */
-export function categoryDir(tagSlugs: readonly string[]): string {
-  const first = tagSlugs.find((t) => t && t.length > 0);
-  return first ? safeSegment(first) : 'uncategorized';
-}
+/** Subdirectory under the workdir where solution files live. */
+export const PROBLEMS_DIR = 'problems';
 
 export interface SolutionPathParts {
   readonly workdir: string;
-  readonly difficulty: string;
-  readonly category: string;
   readonly frontendId: string;
   readonly slug: string;
   readonly langSlug: string;
 }
 
-/** Absolute path of a picked solution: {workdir}/{difficulty}/{category}/{id}.{slug}.{ext} */
+/** Absolute path of a picked solution: {workdir}/problems/{id}.{slug}.{ext} */
 export function solutionPath(parts: SolutionPathParts): string {
   const ext = langExtension(parts.langSlug);
   const filename = `${parts.frontendId}.${safeSegment(parts.slug)}.${ext}`;
-  return path.join(parts.workdir, difficultyDir(parts.difficulty), parts.category, filename);
+  return path.join(parts.workdir, PROBLEMS_DIR, filename);
 }
 
 /** Minimal shape needed to compute a problem's solution path. */
 export interface QuestionLike {
-  readonly difficulty: string;
   readonly questionFrontendId: string;
   readonly titleSlug: string;
-  readonly topicTags?: ReadonlyArray<{ slug?: string | null } | null> | null;
 }
 
-/** Conventional solution path for a problem (category = its first topic tag). */
+/** Conventional solution path for a problem. */
 export function solutionPathForQuestion(workdir: string, q: QuestionLike, langSlug: string): string {
-  const tags = (q.topicTags ?? []).map((t) => t?.slug ?? '').filter((s): s is string => Boolean(s));
-  return solutionPath({
-    workdir,
-    difficulty: q.difficulty,
-    category: categoryDir(tags),
-    frontendId: q.questionFrontendId,
-    slug: q.titleSlug,
-    langSlug,
-  });
+  return solutionPath({ workdir, frontendId: q.questionFrontendId, slug: q.titleSlug, langSlug });
 }
 
 export interface SolutionMeta {

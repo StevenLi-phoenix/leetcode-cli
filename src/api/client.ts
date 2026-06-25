@@ -34,11 +34,15 @@ function titleCase(s: string): string {
 
 export type DifficultyFilter = 'EASY' | 'MEDIUM' | 'HARD';
 
+/** LeetCode QuestionListFilterInput.status enum. */
+export type StatusFilter = 'NOT_STARTED' | 'AC' | 'TRIED';
+
 export interface ListParams {
   difficulty?: DifficultyFilter;
   tags?: string[];
   search?: string;
   category?: string;
+  status?: StatusFilter;
   limit?: number;
   skip?: number;
 }
@@ -160,6 +164,7 @@ export class LeetCodeClient {
     if (params.difficulty) filters.difficulty = params.difficulty;
     if (params.tags?.length) filters.tags = params.tags;
     if (params.search) filters.searchKeywords = params.search;
+    if (params.status) filters.status = params.status;
     const variables = {
       categorySlug: params.category ?? '',
       limit: params.limit ?? 50,
