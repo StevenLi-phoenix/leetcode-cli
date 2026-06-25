@@ -10,8 +10,6 @@
  * (and optional LEETCODE_SITE) override whatever is stored, so the tool works
  * in CI or shells without a prior `login`.
  */
-import os from 'node:os';
-import path from 'node:path';
 import Conf from 'conf';
 import { UsageError } from './lib/errors.js';
 
@@ -115,7 +113,9 @@ interface StoreShape {
 const DEFAULTS: StoreShape = {
   site: 'leetcode.com',
   lang: 'python3',
-  workdir: path.join(os.homedir(), 'leetcode'),
+  // Default to the current working directory so picked files land where the
+  // user runs the command (override with `config workdir` or LEETCODE_WORKDIR).
+  workdir: process.cwd(),
   editor: '',
   credentials: {},
   timer: {

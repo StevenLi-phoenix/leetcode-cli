@@ -13,7 +13,7 @@ $ leetcode list -d easy -n 5
     20  Easy    44.4%  Valid Parentheses
 
 $ leetcode pick 1 --lang python3
-✔ Created ~/leetcode/easy/array/1.two-sum.py
+✔ Created ./easy/array/1.two-sum.py
 Language: python3  ·  id: 1  ·  two-sum
 
 $ leetcode test 1        # run the example cases
@@ -79,13 +79,13 @@ Reading problems, listing, and the daily challenge work anonymously; `whoami`, `
 
 ### Solution files
 
-`pick` writes files under your workdir, organized as:
+`pick` writes files under your workdir (defaults to the current directory; set a fixed one with `config workdir`), organized as:
 
 ```
 {workdir}/{difficulty}/{category}/{id}.{slug}.{ext}
 ```
 
-e.g. `~/leetcode/easy/array/1.two-sum.py`. Each file begins with a one-line metadata comment so `test`/`submit` can recover the problem id, language, and slug automatically — just point them at the file (or the problem id) after editing.
+e.g. `./easy/array/1.two-sum.py`. Each file begins with a one-line metadata comment so `test`/`submit` can recover the problem id, language, and slug automatically — just point them at the file (or the problem id) after editing.
 
 ### Configuration
 
