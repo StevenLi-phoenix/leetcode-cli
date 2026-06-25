@@ -1,3 +1,5 @@
+![](./assets/hero.png)
+
 # leetcode-cli
 
 A minimal LeetCode CLI for terminal-driven problem solving. No TUI, no remote backend, no native dependencies — just `list`, `show`, `pick`, `test`, `submit`, and a few quality-of-life extras. Solve in your own editor; drive everything from the shell.
