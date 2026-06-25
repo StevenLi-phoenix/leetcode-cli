@@ -27,6 +27,9 @@ const USER_AGENT =
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** LeetCode caps problemsetQuestionList at 100 rows per request. */
+const PAGE_LIMIT = 100;
+
 /** Normalise a difficulty label to Title Case (e.g. "EASY" → "Easy"). */
 function titleCase(s: string): string {
   return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
@@ -158,19 +161,44 @@ export class LeetCodeClient {
     return questionSchema.parse(data.question);
   }
 
-  /** List problems with optional filters; returns normalised rows + total. */
+  /**
+   * List problems with optional filters; returns normalised rows + total.
+   *
+   * LeetCode caps each request at 100 rows, so a larger `limit` is satisfied by
+   * paginating internally (with a small delay between pages to be gentle on the
+   * rate limiter).
+   */
   async problemList(params: ListParams = {}): Promise<{ total: number; items: ProblemListItem[] }> {
+    const want = params.limit ?? 50;
+    const startSkip = params.skip ?? 0;
+    const items: ProblemListItem[] = [];
+    let total = 0;
+
+    for (let skip = startSkip; items.length < want; ) {
+      const pageLimit = Math.min(PAGE_LIMIT, want - items.length);
+      const page = await this.fetchListPage(params, pageLimit, skip);
+      total = page.total;
+      if (page.items.length === 0) break;
+      items.push(...page.items);
+      skip += page.items.length;
+      if (skip >= total) break;
+      if (items.length < want) await sleep(150); // courtesy delay between pages
+    }
+    return { total, items: items.slice(0, want) };
+  }
+
+  /** Fetch a single page (≤100) of the problem list. */
+  private async fetchListPage(
+    params: ListParams,
+    limit: number,
+    skip: number,
+  ): Promise<{ total: number; items: ProblemListItem[] }> {
     const filters: Record<string, unknown> = {};
     if (params.difficulty) filters.difficulty = params.difficulty;
     if (params.tags?.length) filters.tags = params.tags;
     if (params.search) filters.searchKeywords = params.search;
     if (params.status) filters.status = params.status;
-    const variables = {
-      categorySlug: params.category ?? '',
-      limit: params.limit ?? 50,
-      skip: params.skip ?? 0,
-      filters,
-    };
+    const variables = { categorySlug: params.category ?? '', limit, skip, filters };
     const data = await this.graphql(problemListQuery(this.cfg.site), variables);
     const parsed = listResponseSchema.parse(data);
     const cn = this.cfg.site === 'leetcode.cn';

@@ -69,7 +69,7 @@ Reading problems, listing, and the daily challenge work anonymously; `whoami`, `
 | `test <target>` | Run against example or custom (`-c`) test cases |
 | `submit <target>` | Submit to the judge |
 | `daily` | Today's daily challenge (`-p` to also pick it) |
-| `random` (`rand`) | A random problem (`-d`, `-t`, `-p`) |
+| `random` (`rand`) | A random problem (`-d`, `-t`, `--status`, `-p`) — e.g. `random --status unsolved` |
 | `timer [id]` | Interview-style countdown (`-m <min>`, `--stats`) |
 | `snapshot <action> <target> [label]` | Local versioning: `save` / `list` / `diff` / `restore` |
 | `config [key] [value]` | View/set `site`, `lang`, `workdir`, `editor` |
