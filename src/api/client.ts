@@ -30,6 +30,16 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 /** LeetCode caps problemsetQuestionList at 100 rows per request. */
 const PAGE_LIMIT = 100;
 
+/** Parse a `Retry-After` header (seconds or HTTP-date) into ms, capped at 30s. */
+export function retryAfterMs(header: string | null): number | null {
+  if (!header) return null;
+  const secs = Number(header);
+  if (Number.isFinite(secs)) return Math.min(Math.max(0, secs) * 1000, 30_000);
+  const when = Date.parse(header);
+  if (!Number.isNaN(when)) return Math.min(Math.max(0, when - Date.now()), 30_000);
+  return null;
+}
+
 /** Normalise a difficulty label to Title Case (e.g. "EASY" → "Easy"). */
 function titleCase(s: string): string {
   return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
@@ -120,13 +130,34 @@ export class LeetCodeClient {
     };
   }
 
+  // ── HTTP with automatic 429 / 503 retry ──────────────────────────────────
+
+  /**
+   * `fetch` wrapper that transparently retries rate-limit (429) and transient
+   * (503) responses with exponential backoff, honouring `Retry-After`. Network
+   * errors are left to the caller to wrap. After exhausting retries it returns
+   * the last response so the caller's status handling reports it.
+   */
+  private async fetchRetry(url: string, init?: RequestInit): Promise<Response> {
+    const maxRetries = 5;
+    for (let attempt = 0; ; attempt++) {
+      const res = await fetch(url, init);
+      if ((res.status === 429 || res.status === 503) && attempt < maxRetries) {
+        const wait = retryAfterMs(res.headers.get('retry-after')) ?? Math.min(1000 * 2 ** attempt, 8000);
+        await sleep(wait);
+        continue;
+      }
+      return res;
+    }
+  }
+
   // ── GraphQL ───────────────────────────────────────────────────────────────
 
   async graphql(query: string, variables: Record<string, unknown>, opts: { auth?: boolean } = {}): Promise<unknown> {
     const creds = opts.auth ? this.requireCreds() : this.cfg.getCredentials();
     let res: Response;
     try {
-      res = await fetch(this.cfg.endpoints.graphql, {
+      res = await this.fetchRetry(this.cfg.endpoints.graphql, {
         method: 'POST',
         headers: this.graphqlHeaders(creds),
         body: JSON.stringify({ query, variables }),
@@ -249,7 +280,7 @@ export class LeetCodeClient {
     const creds = this.requireCreds();
     let res: Response;
     try {
-      res = await fetch(url, { method: 'POST', headers: this.authHeaders(creds, referer), body: JSON.stringify(body) });
+      res = await this.fetchRetry(url, { method: 'POST', headers: this.authHeaders(creds, referer), body: JSON.stringify(body) });
     } catch (err) {
       throw new NetworkError(`Request to ${this.cfg.site} failed: ${(err as Error).message}`);
     }
@@ -318,7 +349,7 @@ export class LeetCodeClient {
     const creds = this.requireCreds();
     let res: Response;
     try {
-      res = await fetch(url, { headers: this.authHeaders(creds, `${this.cfg.endpoints.base}/`) });
+      res = await this.fetchRetry(url, { headers: this.authHeaders(creds, `${this.cfg.endpoints.base}/`) });
     } catch (err) {
       throw new NetworkError(`Request to ${this.cfg.site} failed: ${(err as Error).message}`);
     }
@@ -369,7 +400,7 @@ export class LeetCodeClient {
     if (creds) headers.cookie = this.cookieHeader(creds);
     let res: Response;
     try {
-      res = await fetch(url, { headers });
+      res = await this.fetchRetry(url, { headers });
     } catch (err) {
       throw new NetworkError(`Failed to fetch the problem index: ${(err as Error).message}`);
     }
