@@ -2,8 +2,20 @@ name: Release
 
 # Cut a release by pushing a version tag that matches package.json, e.g.:
 #   git tag v0.1.0 && git push origin v0.1.0
-# This builds + typechecks + tests, then publishes the package to npm and to
-# GitHub Packages, and creates a GitHub Release with the packed tarball attached.
+# This builds + typechecks + tests, then publishes to npm (via OIDC Trusted
+# Publishing — no token) and to GitHub Packages (GITHUB_TOKEN), and creates a
+# GitHub Release with the packed tarball attached. Each publish is idempotent:
+# if the version is already on a registry it's skipped, so re-running a release
+# (or a tag pushed after a one-time local bootstrap publish) is safe.
+#
+# ONE-TIME BOOTSTRAP (npm Trusted Publishing can't be configured for a package
+# that doesn't exist yet — npm/cli#8544):
+#   1. Publish v0.1.0 once from your machine with a token:
+#        pnpm build && npm publish --access public
+#   2. On npmjs.com → the package's Access settings → add a Trusted Publisher:
+#        GitHub Actions, repo StevenLi-phoenix/leetcode-cli, workflow release.yml
+#      and set publishing access to "Require 2FA and disallow tokens".
+#   3. Revoke the bootstrap token. Every later release is pure OIDC via this file.
 
 on:
   push:
@@ -11,15 +23,13 @@ on:
       - "v*"
 
 permissions:
-  contents: write # create the GitHub Release
+  id-token: write # REQUIRED: mints the OIDC token for npm Trusted Publishing + provenance
+  contents: write # create the GitHub Release (also covers checkout)
   packages: write # publish to GitHub Packages
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    env:
-      # Surfaced at job level so the npm-publish step's `if:` can see it.
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,8 +37,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22 # npm Trusted Publishing needs Node >= 22.14
           cache: pnpm
+
+      - name: Upgrade npm for OIDC Trusted Publishing
+        run: npm install -g npm@latest # Node 22 ships npm 10.x; OIDC needs npm >= 11.5.1
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -54,25 +67,35 @@ jobs:
       - name: Pack tarball
         run: pnpm pack # -> stevenli-phoenix-leetcode-cli-<version>.tgz
 
-      - name: Publish to npm (public)
-        if: ${{ env.NPM_TOKEN != '' }}
+      - name: Publish to npm (Trusted Publishing, OIDC)
         run: |
-          cat > .npmrc <<EOF
-          registry=https://registry.npmjs.org/
-          //registry.npmjs.org/:_authToken=${NPM_TOKEN}
-          EOF
-          npm publish --access public
+          PKG="$(node -p "require('./package.json').name")"
+          VERSION="$(node -p "require('./package.json').version")"
+          # Minimal .npmrc: registry only, NO _authToken line — npm auto-detects
+          # the GitHub Actions OIDC environment and publishes with provenance.
+          printf 'registry=https://registry.npmjs.org/\n' > .npmrc
+          if npm view "$PKG@$VERSION" version --registry=https://registry.npmjs.org/ >/dev/null 2>&1; then
+            echo "npm: $PKG@$VERSION already published — skipping."
+          else
+            npm publish --access public
+          fi
           rm -f .npmrc
 
       - name: Publish to GitHub Packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          PKG="$(node -p "require('./package.json').name")"
+          VERSION="$(node -p "require('./package.json').version")"
           cat > .npmrc <<EOF
           @stevenli-phoenix:registry=https://npm.pkg.github.com
           //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
           EOF
-          npm publish
+          if npm view "$PKG@$VERSION" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
+            echo "GitHub Packages: $PKG@$VERSION already published — skipping."
+          else
+            npm publish
+          fi
           rm -f .npmrc
 
       - name: Create GitHub Release
