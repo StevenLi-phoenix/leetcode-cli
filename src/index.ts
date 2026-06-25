@@ -18,6 +18,7 @@ import { registerList } from './commands/list.js';
 import { registerShow } from './commands/show.js';
 import { registerHint } from './commands/hint.js';
 import { registerPick } from './commands/pick.js';
+import { registerPull } from './commands/pull.js';
 import { registerTest } from './commands/test.js';
 import { registerSubmit } from './commands/submit.js';
 import { registerDaily } from './commands/daily.js';
@@ -50,6 +51,7 @@ for (const register of [
   registerShow,
   registerHint,
   registerPick,
+  registerPull,
   registerTest,
   registerSubmit,
   registerDaily,

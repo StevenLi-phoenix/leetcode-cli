@@ -504,9 +504,9 @@ A common "random" recipe (UNVERIFIED composite, not a single named query):
 
 - **User profile (`.com`)** — `profile.graphql`: `data.{matchedUser, allQuestionsCount, recentSubmissionList}`, vars `{ username: String! }`.
 - **Recent submissions (`.com`)** — `recent-submissions.graphql`: `data.recentSubmissionList`, vars `{ username: String!, limit: Int }`.
-- **Own submissions list (`.com`, auth)** — `submissions.graphql`: `data.submissionList → { hasNext, submissions[] }`, vars `{ offset: Int!, limit: Int!, slug: String }` (limit ≤ 20/page; paginate via `hasNext` + `offset += 20`).
-- **Submission detail (`.com`, auth)** — `submission-detail.graphql`: `data.submissionDetails` (PLURAL field, `submissionId: Int!`), includes submitted `code`.
-- **Submission detail (`.cn`, auth)** — `data.submissionDetail` (SINGULAR field, `submissionId: ID!`), inline fragments on `GeneralSubmissionNode`/`ContestSubmissionNode`.
+- **Own submissions list (`.com`, auth)** — `submissions.graphql`: `data.submissionList → { hasNext, submissions[] }`, vars `{ offset: Int!, limit: Int!, slug: String }` (limit ≤ 20/page; paginate via `hasNext` + `offset += 20`). `.cn` differs: `questionSlug: String!` is **required** and pagination is cursor-based via `lastKey`. **[USED-BY-CLI: `pull`; verified live 2026-06-24]**
+- **Submission detail (`.com`, auth)** — `submission-detail.graphql`: `data.submissionDetails` (PLURAL field, `submissionId: Int!`), includes submitted `code`; `lang` is an object `{ name }`. **[USED-BY-CLI: `pull`; verified live 2026-06-24]**
+- **Submission detail (`.cn`, auth)** — `data.submissionDetail` (SINGULAR field, `submissionId: ID!`), `lang` is a plain string; `code` is top-level (inline fragments only wrap `outputDetail`). **[USED-BY-CLI: `pull`]**
 - **Contest ranking (`.com`)** — `contest.graphql`: `data.{userContestRanking, userContestRankingHistory}`, vars `{ username: String! }`.
 - **Contest ranking (`.cn`)** — op `userContestRankingInfo` on `/graphql/noj-go/`.
 - **CN user progress (`.cn`, auth, `/graphql/noj-go/`)** — op `userProgressQuestionList`, vars `{ filters: { skip, limit, questionStatus: "SOLVED"|"ATTEMPTED", difficulty: [...] } }`.

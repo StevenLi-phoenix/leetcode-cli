@@ -149,3 +149,70 @@ export function dailyQuery(site: Site): string {
 export function userStatusQuery(site: Site): string {
   return site === 'leetcode.cn' ? USER_STATUS_CN : USER_STATUS_COM;
 }
+
+/**
+ * Own submission list (auth) — .com. `questionSlug` is optional ($slug:String):
+ * omit/null to page the whole history. Plain `offset` pagination; no lastKey.
+ */
+const SUBMISSION_LIST_COM = /* GraphQL */ `
+query submissions($offset: Int!, $limit: Int!, $slug: String) {
+  submissionList(offset: $offset, limit: $limit, questionSlug: $slug) {
+    hasNext
+    submissions {
+      id
+      statusDisplay
+      lang
+      timestamp
+      title
+      titleSlug
+    }
+  }
+}`;
+
+/**
+ * Own submission list (auth) — .cn. `questionSlug` is REQUIRED ($questionSlug:String!)
+ * and pagination is cursor-based via `lastKey` (pass it back on the next page).
+ */
+const SUBMISSION_LIST_CN = /* GraphQL */ `
+query submissions($offset: Int!, $limit: Int!, $lastKey: String, $questionSlug: String!) {
+  submissionList(offset: $offset, limit: $limit, lastKey: $lastKey, questionSlug: $questionSlug) {
+    lastKey
+    hasNext
+    submissions {
+      id
+      statusDisplay
+      lang
+      timestamp
+    }
+  }
+}`;
+
+/** Submission detail (auth) — .com: PLURAL field, `$id: Int!`, `lang` is an object. */
+const SUBMISSION_DETAIL_COM = /* GraphQL */ `
+query submissionDetails($id: Int!) {
+  submissionDetails(submissionId: $id) {
+    code
+    lang { name }
+    question { questionId titleSlug }
+  }
+}`;
+
+/** Submission detail (auth) — .cn: SINGULAR field, `$id: ID!`, `lang` is a string. */
+const SUBMISSION_DETAIL_CN = /* GraphQL */ `
+query submissionDetail($id: ID!) {
+  submissionDetail(submissionId: $id) {
+    code
+    lang
+    question { questionId titleSlug }
+  }
+}`;
+
+/** Pick the site-appropriate submission-list query. */
+export function submissionListQuery(site: Site): string {
+  return site === 'leetcode.cn' ? SUBMISSION_LIST_CN : SUBMISSION_LIST_COM;
+}
+
+/** Pick the site-appropriate submission-detail query. */
+export function submissionDetailQuery(site: Site): string {
+  return site === 'leetcode.cn' ? SUBMISSION_DETAIL_CN : SUBMISSION_DETAIL_COM;
+}

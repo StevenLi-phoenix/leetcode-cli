@@ -177,6 +177,66 @@ export const allProblemsSchema = z.object({
   ),
 });
 
+/** One row of the user's own submission list (union of .com/.cn fields). */
+export const submissionRowSchema = z.object({
+  id: z.union([z.string(), z.number()]),
+  statusDisplay: z.string().nullable().optional(),
+  lang: z.string().nullable().optional(),
+  timestamp: z.union([z.string(), z.number()]).nullable().optional(),
+  title: z.string().nullable().optional(),
+  titleSlug: z.string().nullable().optional(),
+});
+export type SubmissionRow = z.infer<typeof submissionRowSchema>;
+
+/** `submissionList` response (auth). `.cn` adds `lastKey`; `.com` is offset-only. */
+export const submissionListSchema = z.object({
+  submissionList: z
+    .object({
+      hasNext: z.boolean().nullable().optional(),
+      lastKey: z.string().nullable().optional(),
+      submissions: z.array(submissionRowSchema).nullable().optional().default([]),
+    })
+    .nullable(),
+});
+
+const submissionQuestionRef = z
+  .object({
+    questionId: z.string().nullable().optional(),
+    titleSlug: z.string().nullable().optional(),
+  })
+  .nullable()
+  .optional();
+
+/** `submissionDetails` (.com): PLURAL field, `lang` is an object `{ name }`. */
+export const submissionDetailsComSchema = z.object({
+  submissionDetails: z
+    .object({
+      code: z.string(),
+      lang: z.object({ name: z.string() }).nullable().optional(),
+      question: submissionQuestionRef,
+    })
+    .nullable(),
+});
+
+/** `submissionDetail` (.cn): SINGULAR field, `lang` is a plain langSlug string. */
+export const submissionDetailCnSchema = z.object({
+  submissionDetail: z
+    .object({
+      code: z.string(),
+      lang: z.string().nullable().optional(),
+      question: submissionQuestionRef,
+    })
+    .nullable(),
+});
+
+/** Normalised submission code + metadata returned by the client. */
+export interface SubmissionCode {
+  readonly code: string;
+  readonly langSlug: string | null;
+  readonly questionId: string | null;
+  readonly titleSlug: string | null;
+}
+
 /** Judge status_code → human label. */
 export const STATUS_CODES: Record<number, string> = {
   10: 'Accepted',

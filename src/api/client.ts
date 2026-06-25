@@ -9,7 +9,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { AppConfig, Credentials } from '../config.js';
 import { AuthError, NetworkError, ApiError, NotFoundError } from '../lib/errors.js';
-import { QUESTION_DETAIL, problemListQuery, dailyQuery, userStatusQuery } from './queries.js';
+import {
+  QUESTION_DETAIL,
+  problemListQuery,
+  dailyQuery,
+  userStatusQuery,
+  submissionListQuery,
+  submissionDetailQuery,
+} from './queries.js';
 import {
   questionSchema,
   listResponseSchema,
@@ -19,8 +26,12 @@ import {
   interpretResponseSchema,
   submitResponseSchema,
   allProblemsSchema,
+  submissionListSchema,
+  submissionDetailsComSchema,
+  submissionDetailCnSchema,
 } from './schemas.js';
-import type { Question, UserStatus, CheckResult, ProblemListItem } from './schemas.js';
+import type { Question, UserStatus, CheckResult, ProblemListItem, SubmissionRow, SubmissionCode } from './schemas.js';
+import { pickAcSubmission } from '../lib/submissions.js';
 
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -29,6 +40,12 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 
 /** LeetCode caps problemsetQuestionList at 100 rows per request. */
 const PAGE_LIMIT = 100;
+
+/** LeetCode caps the submission list at 20 rows per request. */
+const SUBMISSION_PAGE = 20;
+
+/** Stop scanning a problem's submissions after this many pages (≈500 rows). */
+const MAX_SUBMISSION_PAGES = 25;
 
 /** Parse a `Retry-After` header (seconds or HTTP-date) into ms, capped at 30s. */
 export function retryAfterMs(header: string | null): number | null {
@@ -272,6 +289,104 @@ export class LeetCodeClient {
     const data = (await this.graphql(userStatusQuery(this.cfg.site), {}, { auth: true })) as { userStatus?: unknown };
     if (!data?.userStatus) throw new ApiError('Could not read user status.');
     return userStatusSchema.parse(data.userStatus);
+  }
+
+  // ── Submissions (auth) ────────────────────────────────────────────────────
+
+  /**
+   * One page (≤20) of the signed-in user's submissions for a problem, newest
+   * first. `.com` pages by `offset`; `.cn` requires `questionSlug` and pages by
+   * the `lastKey` cursor (pass the previous page's `lastKey` back in).
+   */
+  async submissionsPage(
+    slug: string,
+    offset: number,
+    lastKey: string | null,
+  ): Promise<{ hasNext: boolean; lastKey: string | null; submissions: SubmissionRow[] }> {
+    const cn = this.cfg.site === 'leetcode.cn';
+    const variables: Record<string, unknown> = cn
+      ? { offset, limit: SUBMISSION_PAGE, lastKey, questionSlug: slug }
+      : { offset, limit: SUBMISSION_PAGE, slug };
+    const data = await this.graphql(submissionListQuery(this.cfg.site), variables, { auth: true });
+    const list = submissionListSchema.parse(data).submissionList;
+    return { hasNext: list?.hasNext ?? false, lastKey: list?.lastKey ?? null, submissions: list?.submissions ?? [] };
+  }
+
+  /** Walk a problem's submission pages (newest first) up to the page cap. */
+  private async *eachSubmissionPage(slug: string): AsyncGenerator<SubmissionRow[]> {
+    let offset = 0;
+    let lastKey: string | null = null;
+    for (let page = 0; page < MAX_SUBMISSION_PAGES; page++) {
+      const { hasNext, lastKey: nextKey, submissions } = await this.submissionsPage(slug, offset, lastKey);
+      yield submissions;
+      if (!hasNext || submissions.length === 0) break;
+      offset += submissions.length;
+      lastKey = nextKey;
+      await sleep(150); // courtesy delay between pages
+    }
+  }
+
+  /**
+   * The most recent Accepted submission for a problem (optionally restricted to
+   * a language), or null if none.
+   */
+  async latestAcSubmission(slug: string, opts: { lang?: string } = {}): Promise<SubmissionRow | null> {
+    for await (const submissions of this.eachSubmissionPage(slug)) {
+      const hit = pickAcSubmission(submissions, opts.lang);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  /**
+   * Best Accepted submission for a problem under a *preference*: return the most
+   * recent submission in `preferLang` if one exists, otherwise fall back to the
+   * most recent Accepted submission in any language. Null if there is no AC at
+   * all. Used by `pull` so each problem yields exactly one file (your C++ if you
+   * have it, any accepted language if you don't).
+   */
+  async bestAcSubmission(slug: string, preferLang?: string): Promise<SubmissionRow | null> {
+    let fallback: SubmissionRow | null = null;
+    for await (const submissions of this.eachSubmissionPage(slug)) {
+      const preferred = pickAcSubmission(submissions, preferLang);
+      if (preferred) return preferred;
+      // Newest-first, so the first AC we ever see is the latest in any language.
+      if (!fallback) fallback = pickAcSubmission(submissions);
+    }
+    return fallback;
+  }
+
+  /** One fetch of a submission's detail; null when LeetCode returns no detail. */
+  private async fetchSubmissionDetail(id: string): Promise<SubmissionCode | null> {
+    if (this.cfg.site === 'leetcode.cn') {
+      const data = await this.graphql(submissionDetailQuery('leetcode.cn'), { id }, { auth: true });
+      const d = submissionDetailCnSchema.parse(data).submissionDetail;
+      return d ? { code: d.code, langSlug: d.lang ?? null, questionId: d.question?.questionId ?? null, titleSlug: d.question?.titleSlug ?? null } : null;
+    }
+    const data = await this.graphql(submissionDetailQuery('leetcode.com'), { id: Number(id) }, { auth: true });
+    const d = submissionDetailsComSchema.parse(data).submissionDetails;
+    return d ? { code: d.code, langSlug: d.lang?.name ?? null, questionId: d.question?.questionId ?? null, titleSlug: d.question?.titleSlug ?? null } : null;
+  }
+
+  /**
+   * Fetch the source code (+ lang/questionId) of a submission by id. Under rapid
+   * batch use LeetCode soft-throttles by returning an HTTP-200 response with a
+   * `null` detail (so the 429/503 retry doesn't fire); we retry that here with
+   * backoff before giving up.
+   */
+  async submissionCode(id: string): Promise<SubmissionCode> {
+    const maxRetries = 4;
+    for (let attempt = 0; ; attempt++) {
+      const detail = await this.fetchSubmissionDetail(id);
+      if (detail) return detail;
+      if (attempt >= maxRetries) {
+        throw new NotFoundError(
+          `Submission ${id} was not found on ${this.cfg.site}.`,
+          'LeetCode may be throttling — retry in a moment.',
+        );
+      }
+      await sleep(Math.min(800 * 2 ** attempt, 5000));
+    }
   }
 
   // ── REST: run / submit / check ────────────────────────────────────────────

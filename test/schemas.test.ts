@@ -1,6 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { questionSchema, checkResultSchema, listResponseSchema, userStatusSchema, STATUS_CODES } from '../src/api/schemas.ts';
+import {
+  questionSchema,
+  checkResultSchema,
+  listResponseSchema,
+  userStatusSchema,
+  STATUS_CODES,
+  submissionListSchema,
+  submissionDetailsComSchema,
+  submissionDetailCnSchema,
+} from '../src/api/schemas.ts';
 
 test('questionSchema tolerates nulls and applies defaults', () => {
   const q = questionSchema.parse({
@@ -45,6 +54,48 @@ test('userStatusSchema parses a minimal status', () => {
   const u = userStatusSchema.parse({ isSignedIn: true, username: 'me' });
   assert.equal(u.isSignedIn, true);
   assert.equal(u.username, 'me');
+});
+
+test('submissionListSchema parses .com and .cn submission lists', () => {
+  const com = submissionListSchema.parse({
+    submissionList: {
+      hasNext: true,
+      submissions: [
+        { id: '123', statusDisplay: 'Accepted', lang: 'cpp', timestamp: 1700000000, title: 'Two Sum', titleSlug: 'two-sum' },
+        { id: 122, statusDisplay: 'Wrong Answer', lang: 'cpp', timestamp: 1699999999 },
+      ],
+    },
+  });
+  assert.equal(com.submissionList?.submissions?.[0]?.statusDisplay, 'Accepted');
+  assert.equal(com.submissionList?.submissions?.[0]?.id, '123');
+  assert.equal(com.submissionList?.submissions?.[1]?.id, 122);
+
+  const cn = submissionListSchema.parse({
+    submissionList: {
+      lastKey: 'abc',
+      hasNext: false,
+      submissions: [{ id: '9', statusDisplay: 'Accepted', lang: 'python3', timestamp: '1700000000' }],
+    },
+  });
+  assert.equal(cn.submissionList?.lastKey, 'abc');
+  assert.equal(cn.submissionList?.submissions?.[0]?.lang, 'python3');
+});
+
+test('submissionDetailsComSchema reads code + lang object + questionId', () => {
+  const d = submissionDetailsComSchema.parse({
+    submissionDetails: { code: 'class Solution {}', lang: { name: 'cpp' }, question: { questionId: '1', titleSlug: 'two-sum' } },
+  });
+  assert.equal(d.submissionDetails?.code, 'class Solution {}');
+  assert.equal(d.submissionDetails?.lang?.name, 'cpp');
+  assert.equal(d.submissionDetails?.question?.questionId, '1');
+});
+
+test('submissionDetailCnSchema reads code + lang string', () => {
+  const d = submissionDetailCnSchema.parse({
+    submissionDetail: { code: 'print(1)', lang: 'python3', question: { questionId: '1', titleSlug: 'two-sum' } },
+  });
+  assert.equal(d.submissionDetail?.code, 'print(1)');
+  assert.equal(d.submissionDetail?.lang, 'python3');
 });
 
 test('STATUS_CODES maps judge codes', () => {

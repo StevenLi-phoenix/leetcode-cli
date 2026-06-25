@@ -66,6 +66,7 @@ Reading problems, listing, and the daily challenge work anonymously; `whoami`, `
 | `show <id>` | Render a problem statement (`-x` to include hints) |
 | `hint <id>` | Show hints (`-n <k>` for a single one) |
 | `pick <id>` | Generate a solution file (`-l <lang>`, `-f` force, `--show`, `--open`) |
+| `pull [target]` | Download your **accepted** submission(s): `pull <id>` for one, `pull --all` for every solved problem (`-l <lang>` to pin a language, `-f` force) |
 | `test <target>` | Run against example or custom (`-c`) test cases |
 | `submit <target>` | Submit to the judge |
 | `daily` | Today's daily challenge (`-p` to also pick it) |
@@ -86,6 +87,29 @@ Reading problems, listing, and the daily challenge work anonymously; `whoami`, `
 ```
 
 e.g. `./problems/1.two-sum.py`. Each file begins with a one-line metadata comment so `test`/`submit` can recover the problem id, language, and slug automatically — just point them at the file (or the problem id) after editing.
+
+### Importing your solutions
+
+`pull` downloads code you've already had **accepted** on LeetCode into the same
+`problems/{id}.{slug}.{ext}` files (with the `@leetcode` header), so an existing
+solutions repo and your LeetCode account stay in sync:
+
+```bash
+leetcode pull 1               # one problem (prefers your config language)
+leetcode pull two-sum -l cpp  # pin a language strictly
+leetcode pull --all           # every solved problem — one file each
+leetcode pull --all -l cpp    # only your C++ submissions (skip problems without one)
+```
+
+**One file per problem.** By default `pull` prefers your configured language
+(`config lang`, e.g. `cpp`): it pulls that language's latest accepted submission
+if you have one, and otherwise falls back to your most recent accepted
+submission in any language. Pass `-l <lang>` to pull that language *strictly*
+(problems you never solved in it are skipped). Existing files are left untouched
+unless you pass `-f/--force`, so `--all` is safe to re-run — it skips any
+`{id}.{slug}` already on disk (regardless of extension). Files land in your
+`workdir`; point it at your solutions repo with `leetcode config workdir ~/lc`
+(or run from inside it).
 
 ### Configuration
 
@@ -119,7 +143,7 @@ pnpm dev           # watch build
 
 ## Tech Stack
 
-TypeScript + ESM, bundled with tsup. Node ≥ 20 native `fetch`. `commander` (CLI), `chalk` (colour), `ora` (spinners), `conf` (config/credentials), `zod` (response validation), `diff` (snapshots), `marked` + `marked-terminal` (markdown).
+TypeScript + ESM, bundled with tsup. Node ≥ 20 native `fetch`. `commander` (CLI), `chalk` (colour), `ora` (spinners), `conf` (config/credentials), `zod` (response validation), `diff` (snapshots). Problem statements arrive as HTML and are rendered to the terminal by a small dependency-free converter (`src/lib/render.ts`).
 
 ## License
 
