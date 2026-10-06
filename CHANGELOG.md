@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Files: .github/workflows/ci.yml
 
 ### Changed
+- `test`/`submit` 401/403 errors now carry an extended hint: if only one specific problem keeps failing while others succeed with the same session, the cause may not be the session — run a control on a different problem before re-logging in.
+  Files: src/api/client.ts
 - Bumped the release workflow's actions to their Node 24 runtime versions (`actions/checkout@v5`, `actions/setup-node@v6`, `pnpm/action-setup@v6`, `softprops/action-gh-release@v3`) to clear GitHub's Node 20 deprecation warning.
   Files: .github/workflows/release.yml
 - Documented the release and CI workflows: added npm + CI badges and a "Releasing" section to the README, and a "Release & CI" section to the project CLAUDE.md.

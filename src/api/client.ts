@@ -400,7 +400,12 @@ export class LeetCodeClient {
       throw new NetworkError(`Request to ${this.cfg.site} failed: ${(err as Error).message}`);
     }
     if (res.status === 401 || res.status === 403) {
-      throw new AuthError('LeetCode rejected the request (session expired or invalid).');
+      throw new AuthError(
+        'LeetCode rejected the request (session expired or invalid).',
+        'Run `leetcode login` to sign in, or set LEETCODE_SESSION / LEETCODE_CSRF_TOKEN. ' +
+          'If this keeps failing for only ONE specific problem while other problems succeed with the same session, ' +
+          "the problem's test-case payload may be corrupted/malformed rather than your session — try `leetcode test` on a different problem as a control before re-logging in.",
+      );
     }
     if (!res.ok) {
       throw new NetworkError(`${this.cfg.site} returned HTTP ${res.status} ${res.statusText}.`);
